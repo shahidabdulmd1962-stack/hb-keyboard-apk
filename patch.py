@@ -205,6 +205,17 @@ for p in smali_files:
     if ch:
         wr(p, '\n'.join(out))
 say('OK' if nstr else 'WARN', 'strings: %d string constant(s) rewritten (names, links, email)' % nstr)
+# ------------------------------------------------ 4c. hint letters position
+HINT_PADDING_DP = 7   # distance of the small top-right letters from the key's right edge
+nh = 0
+for p in glob.glob(D + '/res/values*/*.xml'):
+    s = rd(p)
+    s2 = re.sub(r'(<dimen name="config_key_hint_letter_padding">)[^<]*(</dimen>)',
+                r'\g<1>%d.0dip\g<2>' % HINT_PADDING_DP, s)
+    if s2 != s:
+        wr(p, s2)
+        nh += 1
+say('OK' if nh else 'WARN', 'hint letters: padding set to %ddp in %d file(s)' % (HINT_PADDING_DP, nh))
 
 # ------------------------------------------------------------ 5. leftovers
 left = 0
