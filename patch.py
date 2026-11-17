@@ -206,7 +206,7 @@ for p in smali_files:
         wr(p, '\n'.join(out))
 say('OK' if nstr else 'WARN', 'strings: %d string constant(s) rewritten (names, links, email)' % nstr)
 # ------------------------------------------------ 4c. hint letters position
-HINT_PADDING_DP = 7   # distance of the small top-right letters from the key's right edge
+HINT_PADDING_DP = 5   # distance of the small top-right letters from the key's right edge
 nh = 0
 for p in glob.glob(D + '/res/values*/*.xml'):
     s = rd(p)
@@ -216,6 +216,37 @@ for p in glob.glob(D + '/res/values*/*.xml'):
         wr(p, s2)
         nh += 1
 say('OK' if nh else 'WARN', 'hint letters: padding set to %ddp in %d file(s)' % (HINT_PADDING_DP, nh))
+# ------------------------------------------------ 4d. move hint letters down a bit
+HINT_DOWN = 0.30   # 0 = at the top edge, bigger = lower (fraction of the letter height)
+import struct
+hexval = '0x' + struct.pack('>f', HINT_DOWN).hex()
+nk = 0
+for p in smali_files:
+    if os.path.basename(p) != 'KeyDrawParams.smali':
+        continue
+    L = rd(p).split('\n')
+    i = 0
+    while i < len(L):
+        if re.match(r'^\.method .*<init>\(\)V\s*$', L[i]):
+            j = i + 1
+            found_locals = False
+            while j < len(L) and not L[j].startswith('.end method'):
+                mo = re.match(r'^(\s*)\.locals (\d+)\s*$', L[j])
+                if mo:
+                    found_locals = True
+                    L[j] = '%s.locals %d' % (mo.group(1), max(1, int(mo.group(2))))
+                if found_locals and L[j].strip() == 'return-void':
+                    L[j:j] = ['    const v0, ' + hexval,
+                              '    iput v0, p0, Lorg/futo/inputmethod/keyboard/internal/KeyDrawParams;->mHintLabelVerticalAdjustment:F',
+                              '']
+                    nk += 1
+                    break
+                j += 1
+            break
+        i += 1
+    if nk:
+        wr(p, '\n'.join(L))
+say('OK' if nk else 'WARN', 'hint letters: moved down (%s) in %d constructor(s)' % (HINT_DOWN, nk))
 
 # ------------------------------------------------------------ 5. leftovers
 left = 0
