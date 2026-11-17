@@ -2,11 +2,6 @@ name: Build HB Keyboard
 
 on:
   workflow_dispatch:
-    inputs:
-      apk_url:
-        description: "Direct link of the Orbit Board v1.3.9 arm64 APK (leave empty to try automatically)"
-        required: false
-        default: ""
 
 permissions:
   contents: write
@@ -34,22 +29,12 @@ jobs:
           done
           java -jar apktool.jar --version
 
-      - name: Download original APK
+      - name: Get original APK from my own release
         env:
-          APK_URL: ${{ github.event.inputs.apk_url }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          B=https://github.com/fahitakrim/Orbit-Board/releases/download
-          F=Orbit-Board-v1_3_9-arm64-release.apk
-          if [ -n "$APK_URL" ]; then LIST="$APK_URL"; else LIST="$B/v1.3.9/$F $B/1.3.9/$F"; fi
-          for U in $LIST; do
-            echo "trying $U"
-            if curl -fsSL -o orig.apk "$U" && unzip -tq orig.apk > /dev/null 2>&1; then echo "downloaded"; break; fi
-            rm -f orig.apk
-          done
-          if [ ! -f orig.apk ]; then
-            echo "ERROR: could not download the APK. Run the workflow again and paste the direct APK link in apk_url."
-            exit 1
-          fi
+          gh release download source-apk --repo "$GITHUB_REPOSITORY" --pattern "*.apk" --output orig.apk
+          unzip -tq orig.apk > /dev/null
           sha256sum orig.apk
           "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging orig.apk | head -3
 
